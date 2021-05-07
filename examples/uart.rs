@@ -3,7 +3,6 @@
 
 use cortex_m::asm;
 use cortex_m_rt::entry;
-use hal::{flash::ACR, gpio};
 use panic_halt as _;
 use stm32f3xx_hal::{self as hal, pac, prelude::*};
 
@@ -25,7 +24,7 @@ fn main() -> ! {
       let pa3_rx = gpioa.pa3.into_af7(&mut gpioa.moder, &mut gpioa.afrl);
 
       let uart = hal::serial::Serial::usart2(dp.USART2, (pa2_tx, pa3_rx), 9600.bps(), clocks, &mut rcc.apb1);
-      let (mut tx, mut rx) = uart.split();
+      let (mut tx, mut _rx) = uart.split();
       
       let dma1 = dp.DMA1.split(&mut rcc.ahb);
       let mut tx_channel = dma1.ch7;
@@ -36,7 +35,7 @@ fn main() -> ! {
       loop {
             sending = tx.write_all(tx_buffer, tx_channel);
             asm::delay(4_000_000);
-            // this is a bit weird, but the ownership has to be returned 
+            // ownership has to be returned 
             let (tx_buffer_ret, tx_channel_ret, tx_ret) = sending.wait();
             tx = tx_ret;
             tx_channel = tx_channel_ret;
