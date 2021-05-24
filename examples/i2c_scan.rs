@@ -30,11 +30,11 @@ fn main() -> ! {
     let mut gpiob = dp.GPIOB.split(&mut rcc.ahb);
 
     // Configure I2C1
-    let mut scl =
+    let scl =
         gpiob
             .pb6
             .into_af4(&mut gpiob.moder, &mut gpiob.afrl);
-    let mut sda =
+    let sda =
         gpiob
             .pb7
             .into_af4(&mut gpiob.moder, &mut gpiob.afrl);
