@@ -20,6 +20,9 @@ stm32f3xx-hal = { version = "0.6.0", features = ["rt", "stm32f303xe"] }
 heapless = "0.7.0"
 embedded-hal = "0.2.5"
 
+ssd1306 = "0.5.2"
+embedded-graphics = "0.6.2"
+
 # Uncomment for the device example.
 # Update `memory.x`, set target to `thumbv7em-none-eabihf` in `.cargo/config`,
 # and then use `cargo build --examples device` to build it.
