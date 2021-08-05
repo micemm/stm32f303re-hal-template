@@ -15,7 +15,7 @@ to for embedded applications with multiple tasks.
 Also Make sure to add all the required tools to the PATH.
 
 ### Setup
-Install the thumbv7em-none-eabihf target for the nightly toolchain:
+Install the thumbv7em-none-eabihf target:
 ```
 rustup target add thumbv7em-none-eabihf
 ```
