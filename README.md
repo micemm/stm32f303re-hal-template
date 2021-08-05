@@ -1,8 +1,7 @@
 # Rust project using the HAL for the STM32f303
 
 This is a simple embedded rust application that utilizes the
-[freertos-rust](https://crates.io/crates/freertos-rust) crate 
-to for embedded applications with multiple tasks.
+[STM32F3xx HAL](https://crates.io/crates/stm32f3xx-hal) crate.
 
 ### Required Software
 - [Rustup](https://www.rust-lang.org/tools/install)*: Rust toolchain manager
