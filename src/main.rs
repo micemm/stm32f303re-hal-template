@@ -4,17 +4,18 @@
 mod i2c_led_bar;
 mod spi_oled_display;
 mod pwm_led;
+mod potentiometer;
 use i2c_led_bar::LEDBar;
 use spi_oled_display::OLEDDisplay;
+use potentiometer::Potentiometer;
+use pwm_led::TwoColorLED;
 
 use panic_halt as _;
 
 use cortex_m::asm;
 use cortex_m_rt::entry;
 
-use stm32f3xx_hal::{self as hal, pac, prelude::*, delay::Delay};
-use embedded_hal::spi::Mode;
-use hal::spi::Spi;
+use stm32f3xx_hal::{pac, prelude::*, delay::Delay};
 
 use heapless::String;
 
@@ -37,64 +38,59 @@ fn main() -> ! {
     let mut gpioa = dp.GPIOA.split(&mut rcc.ahb);
     let mut gpiob = dp.GPIOB.split(&mut rcc.ahb);
 
-    // Configure I2C
-    let scl = gpiob.pb6.into_af4(&mut gpiob.moder, &mut gpiob.afrl);
-    let sda = gpiob.pb7.into_af4(&mut gpiob.moder, &mut gpiob.afrl);
-
-    let i2c = hal::i2c::I2c::new(
-        dp.I2C1,
-        (scl, sda),
-        100u32.khz(),
-        clocks,
-        &mut rcc.apb1,
-    );
-
-    // configure SPI and pins for display
-    let sck = gpiob.pb3.into_af5(&mut gpiob.moder, &mut gpiob.afrl);
-    let miso = gpiob.pb4.into_af5(&mut gpiob.moder, &mut gpiob.afrl); // not used because display does not send data
-    let mosi = gpiob.pb5.into_af5(&mut gpiob.moder, &mut gpiob.afrl);
-    let mut disp_reset = gpioa.pa8.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper);
-    let dc = gpiob.pb10.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper);
-    let disp_chip_select = gpioa.pa10.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper);
-
-    let spi: Spi<pac::SPI1, (stm32f3xx_hal::gpio::gpiob::PB3<stm32f3xx_hal::gpio::AF5>, stm32f3xx_hal::gpio::gpiob::PB4<stm32f3xx_hal::gpio::AF5>, stm32f3xx_hal::gpio::gpiob::PB5<stm32f3xx_hal::gpio::AF5>), u8> = Spi::spi1(
-        dp.SPI1,
-        (sck, miso, mosi), 
-        Mode{
-            polarity: embedded_hal::spi::Polarity::IdleLow,
-            phase: embedded_hal::spi::Phase::CaptureOnFirstTransition,
-        },
-        8.mhz(),
-        clocks,
-        &mut rcc.apb2,
-    );
-
     let mut delay = Delay::new(cp.SYST, clocks);
 
-    // objects for ADC
-    let mut adc_in_pin = gpioa.pa0.into_analog(&mut gpioa.moder, &mut gpioa.pupdr); // PA0
-    
-    // setup adc
-    let mut adc1 = hal::adc::Adc::adc1(
+    // Display (SPI)
+    let mut display = OLEDDisplay::new(
+        gpiob.pb3.into_af5(&mut gpiob.moder, &mut gpiob.afrl),
+        gpiob.pb4.into_af5(&mut gpiob.moder, &mut gpiob.afrl),
+        gpiob.pb5.into_af5(&mut gpiob.moder, &mut gpiob.afrl),
+        gpioa.pa8.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),
+        gpiob.pb10.into_push_pull_output(&mut gpiob.moder, &mut gpiob.otyper),
+        gpioa.pa10.into_push_pull_output(&mut gpioa.moder, &mut gpioa.otyper),
+        dp.SPI1,
+        &mut delay,
+        &mut rcc.apb2,
+        clocks
+    );
+
+    // LED bar on GPIO extension (I2C)
+    let mut led_bar = LEDBar::new(
+        gpiob.pb6.into_af4(&mut gpiob.moder, &mut gpiob.afrl),
+        gpiob.pb7.into_af4(&mut gpiob.moder, &mut gpiob.afrl),
+        dp.I2C1,
+        clocks,
+        &mut rcc.apb1,
+        I2C_ADDR
+    );
+
+    // Potentiometer
+    let mut potentiometer = Potentiometer::new(
         dp.ADC1,
         &mut dp.ADC1_2,
         &mut rcc.ahb,
-        hal::adc::CkMode::default(),
-        clocks
+        clocks,
+        gpioa.pa0.into_analog(&mut gpioa.moder, &mut gpioa.pupdr)
+    );
+
+    // two color LED
+    let mut two_color_led = TwoColorLED::new(
+        dp.TIM3,
+        gpioa.pa6.into_af2(&mut gpioa.moder, &mut gpioa.afrl),
+        gpioa.pa7.into_af2(&mut gpioa.moder, &mut gpioa.afrl),
+        &clocks
     );
     
-    // create objects to intercat with hardware
-    let mut display = OLEDDisplay::new(spi, dc, disp_chip_select, &mut disp_reset, &mut delay);
     asm::delay(1_000_000);
     display.show_text("Start");
 
-    let mut led_bar = LEDBar::new(i2c, I2C_ADDR);
     led_bar.write_percentage(50).unwrap();
 
     loop {
-        let adc_in_data: u16 = adc1.read(&mut adc_in_pin).expect("Error reading from ADC");
-        let percentage = (((adc_in_data as f32) / (((0x1 << 12) - 1) as f32) * 100_f32) + 0.5_f32) as u8; // 12 bit ADC
+        asm::nop();
+        let percentage = potentiometer.read_percentage();
         led_bar.write_percentage(percentage).unwrap();
+        two_color_led.write_percentage(percentage);
         let mut value_string = String::<30>::from(percentage);
         value_string.push('%').unwrap();
         display.show_text(value_string.as_str());
