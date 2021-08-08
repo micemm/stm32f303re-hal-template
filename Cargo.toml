@@ -1,8 +1,8 @@
 [package]
-authors = ["Michael Emmert <michael.emmert@st.oth-regensburg.de>"]
+authors = ["{{authors}}"]
 edition = "2018"
 readme = "README.md"
-name = "stm32-test"
+name = "{{project-name}}"
 version = "0.1.0"
 
 [dependencies]
@@ -32,7 +32,7 @@ embedded-graphics = "0.6.2"
 
 # this lets you use `cargo fix`!
 [[bin]]
-name = "stm32-test"
+name = "{{project-name}}"
 test = false
 bench = false
 
