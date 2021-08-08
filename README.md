@@ -1,6 +1,6 @@
-# Rust project using the HAL for the STM32f303
+# Rust template using the HAL for the STM32f303
 
-This is a simple embedded rust application that utilizes the
+This is a template for a embedded Rust application that utilizes the
 [STM32F3xx HAL](https://crates.io/crates/stm32f3xx-hal) crate.
 
 ### Required Software
@@ -18,4 +18,9 @@ Install the thumbv7em-none-eabihf target:
 ```
 rustup target add thumbv7em-none-eabihf
 ```
-Clone the project using git and open the project folder in Visual Studio Code.
+
+Install cargo-generate:
+```
+cargo install cargo-generate
+```
+Then use ```cargo generate --git ``` with the link to this template repository.
